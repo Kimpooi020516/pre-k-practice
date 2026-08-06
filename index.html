@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Pre-K Practice</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="theme-color" content="#ff6fa5">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pre-K">
+<style>
+  :root{
+    --red:#ff4d4d;
+    --pink:#ff6fa5;
+    --orange:#ff9f40;
+    --yellow:#ffd93d;
+    --green:#4caf50;
+    --teal:#2ec4b6;
+    --blue:#3b82f6;
+    --purple:#a259e6;
+    --bg:#fff8ee;
+    --ink:#3a2e50;
+  }
+
+  * { box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    overscroll-behavior: none;
+    background: var(--bg);
+    font-family: 'Baloo 2', 'Comic Sans MS', 'Trebuchet MS', 'Segoe UI Rounded', system-ui, sans-serif;
+    color: var(--ink);
+  }
+
+  button { font-family: inherit; cursor: pointer; }
+
+  #app { position: relative; width: 100%; height: 100dvh; overflow: hidden; }
+
+  .icon-btn {
+    position: fixed;
+    top: 16px;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: none;
+    background: #ffffff;
+    box-shadow: 0 6px 0 rgba(0,0,0,.15);
+    font-size: 2.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+  }
+  .icon-btn:active { transform: translateY(6px); box-shadow: 0 1px 0 rgba(0,0,0,.15); }
+  .back-btn { left: 16px; background: #ffe1e1; }
+  .replay-btn { right: 16px; background: #e1f0ff; }
+  .hidden { display: none !important; }
+
+  /* ---------- Home screen ---------- */
+  .home-screen {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .home-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
+    gap: 24px;
+    width: 100%;
+    max-width: 820px;
+  }
+  .home-card {
+    border: none;
+    border-radius: 40px;
+    min-height: 180px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px;
+    color: #fff;
+    font-weight: 800;
+    font-size: 1.6rem;
+    box-shadow: 0 10px 0 rgba(0,0,0,.15);
+  }
+  .home-card:active { transform: translateY(8px); box-shadow: 0 2px 0 rgba(0,0,0,.15); }
+  .home-emoji { font-size: 4.6rem; }
+  .home-card.letters { background: linear-gradient(160deg, var(--red), var(--pink)); }
+  .home-card.numbers { background: linear-gradient(160deg, var(--blue), var(--teal)); }
+  .home-card.colors  { background: linear-gradient(160deg, var(--purple), var(--pink)); }
+  .home-card.lines   { background: linear-gradient(160deg, var(--orange), var(--yellow)); }
+
+  @media (max-width: 480px) {
+    .home-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- Module screens ---------- */
+  .screen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 24px;
+    padding: 140px 20px 40px;
+    overflow-y: auto;
+  }
+
+  .tabs {
+    position: fixed;
+    top: 16px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 16px;
+    z-index: 20;
+  }
+  .tab-btn {
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    border: none;
+    background: #fff;
+    font-size: 2.2rem;
+    box-shadow: 0 6px 0 rgba(0,0,0,.15);
+    opacity: .5;
+  }
+  .tab-btn.active { opacity: 1; box-shadow: 0 6px 0 rgba(0,0,0,.15), 0 0 0 5px var(--yellow); }
+  .tab-btn:active { transform: translateY(6px); }
+
+  /* ---------- Letters ---------- */
+  .letter-display {
+    background: #fff;
+    border-radius: 44px;
+    padding: 10px 60px;
+    font-size: clamp(7rem, 22vw, 13rem);
+    font-weight: 900;
+    box-shadow: 0 10px 0 rgba(0,0,0,.12);
+    line-height: 1;
+  }
+  .letter-display:active { transform: translateY(6px); box-shadow: 0 3px 0 rgba(0,0,0,.12); }
+
+  .options-row {
+    display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;
+    max-width: 700px;
+  }
+  .option-btn {
+    min-width: 130px; min-height: 130px;
+    border-radius: 32px;
+    border: none;
+    background: #fff;
+    font-size: 4rem;
+    box-shadow: 0 8px 0 rgba(0,0,0,.15);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .option-btn:active { transform: translateY(8px); box-shadow: 0 2px 0 rgba(0,0,0,.15); }
+  .number-btn { font-weight: 900; color: var(--purple); }
+
+  /* ---------- Numbers ---------- */
+  .objects-row {
+    display: flex; flex-wrap: wrap; gap: 14px; justify-content: center;
+    max-width: 620px;
+  }
+  .count-object { font-size: clamp(3rem, 9vw, 5rem); }
+  .count-tap-btn {
+    width: 110px; height: 110px;
+    border-radius: 28px;
+    border: none;
+    background: #fff;
+    font-size: 3.2rem;
+    box-shadow: 0 8px 0 rgba(0,0,0,.15);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .count-tap-btn:active { transform: translateY(6px); }
+  .count-tap-btn.tapped { background: #d7ffd9; box-shadow: 0 8px 0 rgba(0,0,0,.1), 0 0 0 5px var(--green); opacity: .85; }
+
+  /* ---------- Colors ---------- */
+  .color-grid {
+    display: flex; flex-wrap: wrap; gap: 24px; justify-content: center;
+    max-width: 640px;
+  }
+  .color-blob {
+    width: 150px; height: 150px;
+    border-radius: 50%;
+    border: none;
+    box-shadow: 0 8px 0 rgba(0,0,0,.15);
+  }
+  .color-blob:active { transform: translateY(8px); box-shadow: 0 2px 0 rgba(0,0,0,.15); }
+
+  /* ---------- Lines ---------- */
+  .line-display-btn {
+    border: none;
+    background: #fff;
+    border-radius: 44px;
+    padding: 10px;
+    box-shadow: 0 10px 0 rgba(0,0,0,.12);
+  }
+  .line-display-btn:active { transform: translateY(6px); box-shadow: 0 3px 0 rgba(0,0,0,.12); }
+  .next-btn {
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    border: none;
+    background: #fff3d6;
+    font-size: 2.4rem;
+    box-shadow: 0 8px 0 rgba(0,0,0,.15);
+  }
+  .next-btn:active { transform: translateY(6px); }
+  .line-option-btn {
+    width: 170px; height: 170px;
+    border-radius: 32px;
+    border: none;
+    background: #fff;
+    box-shadow: 0 8px 0 rgba(0,0,0,.15);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .line-option-btn:active { transform: translateY(8px); }
+
+  /* ---------- Feedback ---------- */
+  .correct-flash { animation: correctPop .5s ease; box-shadow: 0 0 0 8px rgba(76,175,80,.55), 0 8px 0 rgba(0,0,0,.15) !important; }
+  @keyframes correctPop { 0%{ transform: scale(1); } 50%{ transform: scale(1.18); } 100%{ transform: scale(1); } }
+
+  .shake { animation: shakeAnim .5s ease; }
+  @keyframes shakeAnim {
+    10%, 90% { transform: translateX(-6px); }
+    20%, 80% { transform: translateX(8px); }
+    30%, 50%, 70% { transform: translateX(-12px); }
+    40%, 60% { transform: translateX(12px); }
+  }
+
+  .bounce { animation: bounceAnim .4s ease; }
+  @keyframes bounceAnim { 0%{ transform: scale(1); } 50%{ transform: scale(1.25); } 100%{ transform: scale(1); } }
+
+  .celebration {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 999;
+    pointer-events: none;
+  }
+  .celebration-emoji { font-size: 9rem; animation: celebPop .6s ease; }
+  @keyframes celebPop { 0%{ transform: scale(0) rotate(0deg); } 60%{ transform: scale(1.3) rotate(15deg); } 100%{ transform: scale(1) rotate(0deg); } }
+
+  .confetti-piece {
+    position: fixed;
+    top: -40px;
+    animation-name: confettiFall;
+    animation-timing-function: ease-in;
+    animation-fill-mode: forwards;
+  }
+  @keyframes confettiFall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(115vh) rotate(560deg); opacity: .9; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <button id="backBtn" class="icon-btn back-btn hidden" onclick="goHome()" aria-label="home">🏠</button>
+  <button id="replayBtn" class="icon-btn replay-btn hidden" onclick="replayPrompt()" aria-label="hear it">🔊</button>
+
+  <main id="home" class="home-screen">
+    <div class="home-grid">
+      <button class="home-card letters" onclick="openLetters()">
+        <span class="home-emoji">🔤</span><span>Letters</span>
+      </button>
+      <button class="home-card numbers" onclick="openNumbers()">
+        <span class="home-emoji">🔢</span><span>Numbers</span>
+      </button>
+      <button class="home-card colors" onclick="openColors()">
+        <span class="home-emoji">🎨</span><span>Colors</span>
+      </button>
+      <button class="home-card lines" onclick="openLines()">
+        <span class="home-emoji">〰️</span><span>Lines</span>
+      </button>
+    </div>
+  </main>
+
+  <section id="letters-screen" class="screen hidden">
+    <div class="letter-display" id="letterDisplay" onclick="replayPrompt()">A</div>
+    <div class="options-row" id="letterOptions"></div>
+  </section>
+
+  <section id="numbers-screen" class="screen hidden">
+    <div class="tabs">
+      <button class="tab-btn" id="numTabHowMany" onclick="setNumbersMode('howmany')">🔢</button>
+      <button class="tab-btn" id="numTabCount" onclick="setNumbersMode('count')">👆</button>
+    </div>
+    <div id="numbersContent"></div>
+  </section>
+
+  <section id="colors-screen" class="screen hidden">
+    <div class="tabs">
+      <button class="tab-btn" id="colorTabGallery" onclick="setColorsMode('gallery')">🎨</button>
+      <button class="tab-btn" id="colorTabMatch" onclick="setColorsMode('match')">🎯</button>
+    </div>
+    <div id="colorsContent"></div>
+  </section>
+
+  <section id="lines-screen" class="screen hidden">
+    <div class="tabs">
+      <button class="tab-btn" id="lineTabLearn" onclick="setLinesMode('learn')">👀</button>
+      <button class="tab-btn" id="lineTabQuiz" onclick="setLinesMode('quiz')">🎯</button>
+    </div>
+    <div id="linesContent"></div>
+  </section>
+
+  <div id="celebration" class="celebration hidden"></div>
+
+</div>
+
+<script>
+  // ---------- shared helpers ----------
+  function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  function shuffleArray(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function speak(text) {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.85;
+    u.pitch = 1.15;
+    u.lang = 'en-US';
+    window.speechSynthesis.speak(u);
+  }
+
+  let audioCtx;
+  function playChime() {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      const notes = [523.25, 659.25, 783.99];
+      notes.forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const start = audioCtx.currentTime + i * 0.12;
+        gain.gain.setValueAtTime(0.001, start);
+        gain.gain.exponentialRampToValueAtTime(0.25, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.35);
+        osc.start(start);
+        osc.stop(start + 0.4);
+      });
+    } catch (e) { /* audio not available, celebration still shows visually */ }
+  }
+
+  const CHEERS = ['Yay!', 'Great job!', 'Woohoo!', 'You did it!', 'Awesome!', 'Super!'];
+  const CONFETTI_EMOJI = ['🎉', '⭐', '🎊', '✨', '🌟'];
+
+  function celebrate(onDone) {
+    const container = document.getElementById('celebration');
+    container.classList.remove('hidden');
+    const big = document.createElement('div');
+    big.className = 'celebration-emoji';
+    big.textContent = pickRandom(CONFETTI_EMOJI);
+    container.appendChild(big);
+    for (let i = 0; i < 26; i++) {
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      piece.textContent = pickRandom(CONFETTI_EMOJI);
+      piece.style.left = Math.random() * 100 + 'vw';
+      piece.style.fontSize = (16 + Math.random() * 20) + 'px';
+      piece.style.animationDuration = (1 + Math.random()) + 's';
+      piece.style.animationDelay = (Math.random() * 0.3) + 's';
+      container.appendChild(piece);
+    }
+    playChime();
+    speak(pickRandom(CHEERS));
+    setTimeout(() => {
+      container.classList.add('hidden');
+      container.innerHTML = '';
+      if (onDone) onDone();
+    }, 1600);
+  }
+
+  function tryAgain(el) {
+    el.classList.add('shake');
+    speak('Try again!');
+    setTimeout(() => el.classList.remove('shake'), 500);
+  }
+
+  let currentReplay = () => {};
+  function replayPrompt() { currentReplay(); }
+
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+    document.getElementById('home').classList.add('hidden');
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    if (id === 'home') {
+      document.getElementById('home').classList.remove('hidden');
+      document.getElementById('backBtn').classList.add('hidden');
+      document.getElementById('replayBtn').classList.add('hidden');
+    } else {
+      document.getElementById(id).classList.remove('hidden');
+      document.getElementById('backBtn').classList.remove('hidden');
+      document.getElementById('replayBtn').classList.remove('hidden');
+    }
+  }
+  function goHome() { showScreen('home'); }
+
+  // ================= LETTERS =================
+  const LETTER_WORDS = {
+    A: [{ emoji: '🍎', word: 'apple' }, { emoji: '🐜', word: 'ant' }, { emoji: '✈️', word: 'airplane' }],
+    S: [{ emoji: '☀️', word: 'sun' }, { emoji: '🐍', word: 'snake' }, { emoji: '⭐', word: 'star' }],
+    M: [{ emoji: '🌙', word: 'moon' }, { emoji: '🐒', word: 'monkey' }, { emoji: '🐭', word: 'mouse' }],
+    L: [{ emoji: '🦁', word: 'lion' }, { emoji: '🍃', word: 'leaf' }, { emoji: '🍭', word: 'lollipop' }],
+  };
+  const LETTER_SOUNDS = {
+    A: 'A. A says, ah, ah, apple.',
+    S: 'S. S says, sss, sss, snake.',
+    M: 'M. M says, mmm, mmm, monkey.',
+    L: 'L. L says, lll, lll, lion.',
+  };
+  const LETTER_COLORS = { A: 'var(--red)', S: 'var(--blue)', M: 'var(--green)', L: 'var(--purple)' };
+
+  let currentLetter = 'A';
+
+  function openLetters() { showScreen('letters-screen'); newLetterRound(); }
+
+  function newLetterRound() {
+    const letters = ['A', 'S', 'M', 'L'];
+    currentLetter = pickRandom(letters);
+    const displayChar = Math.random() < 0.5 ? currentLetter : currentLetter.toLowerCase();
+    const disp = document.getElementById('letterDisplay');
+    disp.textContent = displayChar;
+    disp.style.color = LETTER_COLORS[currentLetter];
+
+    const correctItem = pickRandom(LETTER_WORDS[currentLetter]);
+    const otherLetters = shuffleArray(letters.filter(l => l !== currentLetter));
+    const distractor1 = pickRandom(LETTER_WORDS[otherLetters[0]]);
+    const distractor2 = pickRandom(LETTER_WORDS[otherLetters[1]]);
+    const options = shuffleArray([
+      { ...correctItem, correct: true },
+      { ...distractor1, correct: false },
+      { ...distractor2, correct: false },
+    ]);
+
+    const row = document.getElementById('letterOptions');
+    row.innerHTML = '';
+    options.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.className = 'option-btn';
+      btn.textContent = opt.emoji;
+      btn.onclick = () => {
+        if (opt.correct) {
+          btn.classList.add('correct-flash');
+          celebrate(() => { btn.classList.remove('correct-flash'); newLetterRound(); });
+        } else {
+          tryAgain(btn);
+        }
+      };
+      row.appendChild(btn);
+    });
+
+    currentReplay = () => speak(LETTER_SOUNDS[currentLetter]);
+    setTimeout(currentReplay, 400);
+  }
+
+  // ================= NUMBERS =================
+  const NUM_EMOJI = ['🍎', '⭐', '🐠', '🎈', '🐞', '🍓'];
+  let numbersMode = 'howmany';
+
+  function openNumbers() { showScreen('numbers-screen'); setNumbersMode('howmany'); }
+
+  function setNumbersMode(mode) {
+    numbersMode = mode;
+    document.getElementById('numTabHowMany').classList.toggle('active', mode === 'howmany');
+    document.getElementById('numTabCount').classList.toggle('active', mode === 'count');
+    if (mode === 'howmany') newHowManyRound(); else newCountRound();
+  }
+
+  function newHowManyRound() {
+    const count = 1 + Math.floor(Math.random() * 5); // 1-5
+    const emoji = pickRandom(NUM_EMOJI);
+    const content = document.getElementById('numbersContent');
+    content.innerHTML = '<div class="objects-row" id="objRow"></div><div class="options-row" id="numChoices"></div>';
+    const objRow = document.getElementById('objRow');
+    for (let i = 0; i < count; i++) {
+      const span = document.createElement('span');
+      span.className = 'count-object';
+      span.textContent = emoji;
+      objRow.appendChild(span);
+    }
+    const choiceSet = new Set([count]);
+    while (choiceSet.size < 3) choiceSet.add(1 + Math.floor(Math.random() * 5));
+    const choices = shuffleArray([...choiceSet]);
+    const choicesRow = document.getElementById('numChoices');
+    choices.forEach(n => {
+      const btn = document.createElement('button');
+      btn.className = 'option-btn number-btn';
+      btn.textContent = n;
+      btn.onclick = () => {
+        if (n === count) {
+          btn.classList.add('correct-flash');
+          celebrate(() => newHowManyRound());
+        } else {
+          tryAgain(btn);
+        }
+      };
+      choicesRow.appendChild(btn);
+    });
+    currentReplay = () => speak('How many? Count with me!');
+    setTimeout(currentReplay, 400);
+  }
+
+  function newCountRound() {
+    const count = 3 + Math.floor(Math.random() * 3); // 3-5
+    const emoji = pickRandom(NUM_EMOJI);
+    const content = document.getElementById('numbersContent');
+    content.innerHTML = '<div class="objects-row" id="countRow"></div>';
+    const row = document.getElementById('countRow');
+    let tapped = 0;
+    for (let i = 0; i < count; i++) {
+      const btn = document.createElement('button');
+      btn.className = 'count-tap-btn';
+      btn.textContent = emoji;
+      btn.onclick = () => {
+        if (btn.classList.contains('tapped')) return;
+        btn.classList.add('tapped');
+        tapped++;
+        speak(String(tapped));
+        if (tapped === count) {
+          setTimeout(() => celebrate(() => newCountRound()), 500);
+        }
+      };
+      row.appendChild(btn);
+    }
+    currentReplay = () => speak('Tap each one and count!');
+    setTimeout(currentReplay, 400);
+  }
+
+  // ================= COLORS =================
+  const COLORS = [
+    { name: 'red', hex: '#ff4d4d' },
+    { name: 'blue', hex: '#3b82f6' },
+    { name: 'yellow', hex: '#ffd93d' },
+    { name: 'green', hex: '#4caf50' },
+    { name: 'orange', hex: '#ff9f40' },
+    { name: 'purple', hex: '#a259e6' },
+  ];
+  let colorsMode = 'gallery';
+
+  function openColors() { showScreen('colors-screen'); setColorsMode('gallery'); }
+
+  function setColorsMode(mode) {
+    colorsMode = mode;
+    document.getElementById('colorTabGallery').classList.toggle('active', mode === 'gallery');
+    document.getElementById('colorTabMatch').classList.toggle('active', mode === 'match');
+    if (mode === 'gallery') renderColorGallery(); else newColorMatchRound();
+  }
+
+  function renderColorGallery() {
+    const content = document.getElementById('colorsContent');
+    content.innerHTML = '<div class="color-grid" id="colorGrid"></div>';
+    const grid = document.getElementById('colorGrid');
+    COLORS.forEach(c => {
+      const btn = document.createElement('button');
+      btn.className = 'color-blob';
+      btn.style.background = c.hex;
+      btn.onclick = () => {
+        btn.classList.add('bounce');
+        speak(c.name);
+        setTimeout(() => btn.classList.remove('bounce'), 400);
+      };
+      grid.appendChild(btn);
+    });
+    currentReplay = () => speak('Tap a color to hear its name!');
+    setTimeout(currentReplay, 400);
+  }
+
+  function newColorMatchRound() {
+    const trio = shuffleArray(COLORS).slice(0, 3);
+    const target = pickRandom(trio);
+    const content = document.getElementById('colorsContent');
+    content.innerHTML = '<div class="color-grid" id="matchGrid"></div>';
+    const grid = document.getElementById('matchGrid');
+    shuffleArray(trio).forEach(c => {
+      const btn = document.createElement('button');
+      btn.className = 'color-blob';
+      btn.style.background = c.hex;
+      btn.onclick = () => {
+        if (c.name === target.name) {
+          btn.classList.add('correct-flash');
+          celebrate(() => newColorMatchRound());
+        } else {
+          tryAgain(btn);
+        }
+      };
+      grid.appendChild(btn);
+    });
+    currentReplay = () => speak('Tap the ' + target.name + ' one!');
+    setTimeout(currentReplay, 500);
+  }
+
+  // ================= LINES =================
+  const LINE_TYPES = [
+    { name: 'vertical', label: 'up and down line' },
+    { name: 'horizontal', label: 'side to side line' },
+    { name: 'diagonal', label: 'slanty line' },
+    { name: 'curve', label: 'curvy line' },
+  ];
+  const LINE_COLORS_LIST = ['#ff4d4d', '#3b82f6', '#4caf50', '#a259e6', '#ff9f40'];
+  let linesMode = 'learn';
+  let learnIndex = 0;
+
+  function openLines() { showScreen('lines-screen'); setLinesMode('learn'); }
+
+  function setLinesMode(mode) {
+    linesMode = mode;
+    document.getElementById('lineTabLearn').classList.toggle('active', mode === 'learn');
+    document.getElementById('lineTabQuiz').classList.toggle('active', mode === 'quiz');
+    if (mode === 'learn') { learnIndex = 0; renderLineLearn(); } else newLineQuizRound();
+  }
+
+  function lineSvg(type, color, size) {
+    size = size || 200;
+    const sw = 16;
+    let shape = '';
+    if (type === 'vertical') shape = `<line x1="${size / 2}" y1="${size * 0.12}" x2="${size / 2}" y2="${size * 0.88}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`;
+    else if (type === 'horizontal') shape = `<line x1="${size * 0.12}" y1="${size / 2}" x2="${size * 0.88}" y2="${size / 2}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`;
+    else if (type === 'diagonal') shape = `<line x1="${size * 0.15}" y1="${size * 0.85}" x2="${size * 0.85}" y2="${size * 0.15}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`;
+    else if (type === 'curve') shape = `<path d="M ${size * 0.15} ${size * 0.75} Q ${size * 0.5} ${size * 0.05} ${size * 0.85} ${size * 0.75}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`;
+    return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">${shape}</svg>`;
+  }
+
+  function renderLineLearn() {
+    const content = document.getElementById('linesContent');
+    const type = LINE_TYPES[learnIndex];
+    content.innerHTML = `
+      <button class="line-display-btn" id="lineDisplayBtn">${lineSvg(type.name, pickRandom(LINE_COLORS_LIST), 220)}</button>
+      <button class="next-btn" id="nextLineBtn">➡️</button>
+    `;
+    document.getElementById('lineDisplayBtn').onclick = () => speak(type.label);
+    document.getElementById('nextLineBtn').onclick = () => {
+      learnIndex = (learnIndex + 1) % LINE_TYPES.length;
+      renderLineLearn();
+    };
+    currentReplay = () => speak(type.label);
+    setTimeout(currentReplay, 400);
+  }
+
+  function newLineQuizRound() {
+    const trio = shuffleArray(LINE_TYPES).slice(0, 3);
+    const target = pickRandom(trio);
+    const content = document.getElementById('linesContent');
+    content.innerHTML = '<div class="options-row" id="lineOptions"></div>';
+    const row = document.getElementById('lineOptions');
+    shuffleArray(trio).forEach(t => {
+      const btn = document.createElement('button');
+      btn.className = 'line-option-btn';
+      btn.innerHTML = lineSvg(t.name, pickRandom(LINE_COLORS_LIST), 140);
+      btn.onclick = () => {
+        if (t.name === target.name) {
+          btn.classList.add('correct-flash');
+          celebrate(() => newLineQuizRound());
+        } else {
+          tryAgain(btn);
+        }
+      };
+      row.appendChild(btn);
+    });
+    currentReplay = () => speak('Tap the ' + target.label + '!');
+    setTimeout(currentReplay, 500);
+  }
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+  }
+</script>
+</body>
+</html>
