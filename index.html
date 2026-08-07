@@ -68,16 +68,19 @@
     padding: 20px;
   }
   .home-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(160px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 24px;
     width: 100%;
     max-width: 820px;
+    justify-content: center;
   }
   .home-card {
     border: none;
     border-radius: 40px;
     min-height: 180px;
+    flex: 1 1 300px;
+    max-width: 360px;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 10px;
     color: #fff;
@@ -91,9 +94,10 @@
   .home-card.numbers { background: linear-gradient(160deg, var(--blue), var(--teal)); }
   .home-card.colors  { background: linear-gradient(160deg, var(--purple), var(--pink)); }
   .home-card.lines   { background: linear-gradient(160deg, var(--orange), var(--yellow)); }
+  .home-card.match   { background: linear-gradient(160deg, var(--green), var(--purple)); }
 
   @media (max-width: 480px) {
-    .home-grid { grid-template-columns: 1fr; }
+    .home-card { flex-basis: 100%; max-width: 100%; }
   }
 
   /* ---------- Module screens ---------- */
@@ -246,6 +250,31 @@
   }
   .line-option-btn:active { transform: translateY(8px); }
 
+  /* ---------- Alphabet Match ---------- */
+  .match-board {
+    display: flex;
+    gap: clamp(30px, 10vw, 90px);
+    justify-content: center;
+  }
+  .match-col {
+    display: flex; flex-direction: column;
+    gap: 14px;
+  }
+  .match-tile {
+    width: 100px; height: 100px;
+    border-radius: 24px;
+    border: none;
+    background: #fff;
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--ink);
+    box-shadow: 0 8px 0 rgba(0,0,0,.15);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .match-tile:active { transform: translateY(6px); }
+  .match-tile.selected { box-shadow: 0 8px 0 rgba(0,0,0,.15), 0 0 0 6px var(--yellow); }
+  .match-tile.matched { opacity: .3; box-shadow: none; background: #d7ffd9; pointer-events: none; }
+
   /* ---------- Feedback ---------- */
   .correct-flash { animation: correctPop .5s ease; box-shadow: 0 0 0 8px rgba(76,175,80,.55), 0 8px 0 rgba(0,0,0,.15) !important; }
   @keyframes correctPop { 0%{ transform: scale(1); } 50%{ transform: scale(1.18); } 100%{ transform: scale(1); } }
@@ -304,6 +333,9 @@
       <button class="home-card lines" onclick="openLines()">
         <span class="home-emoji">〰️</span><span>Lines</span>
       </button>
+      <button class="home-card match" onclick="openMatch()">
+        <span class="home-emoji">🔠🔡</span><span>Match</span>
+      </button>
     </div>
   </main>
 
@@ -344,6 +376,22 @@
     </div>
     <div id="linesContent"></div>
   </section>
+
+  <section id="match-screen" class="screen hidden">
+    <div class="tabs">
+      <button class="tab-btn level-btn" id="matchLevelBtn" onclick="openMatchLevelPicker()">1</button>
+    </div>
+    <div class="match-board" id="matchBoard">
+      <div class="match-col" id="matchColUpper"></div>
+      <div class="match-col" id="matchColLower"></div>
+    </div>
+  </section>
+
+  <div id="matchLevelPicker" class="level-picker hidden" onclick="closeMatchLevelPickerOnBackdrop(event)">
+    <div class="level-picker-card">
+      <div class="level-grid" id="matchLevelGrid"></div>
+    </div>
+  </div>
 
   <div id="celebration" class="celebration hidden"></div>
 
@@ -391,6 +439,24 @@
         osc.stop(start + 0.4);
       });
     } catch (e) { /* audio not available, celebration still shows visually */ }
+  }
+
+  function playDing() {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      const start = audioCtx.currentTime;
+      gain.gain.setValueAtTime(0.001, start);
+      gain.gain.exponentialRampToValueAtTime(0.2, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.25);
+      osc.start(start);
+      osc.stop(start + 0.3);
+    } catch (e) { /* audio not available */ }
   }
 
   const CHEERS = ['Yay!', 'Great job!', 'Woohoo!', 'You did it!', 'Awesome!', 'Super!'];
@@ -875,6 +941,150 @@
     });
     currentReplay = () => speak('Tap the ' + target.label + '!');
     setTimeout(currentReplay, 500);
+  }
+
+  // ================= ALPHABET MATCH =================
+  // Letters ordered by how different their lowercase shape is from the
+  // uppercase one: "same shape, just smaller" first (C/c, O/o...) since those
+  // can be matched by eye alone, then letters whose lowercase form is harder
+  // to connect to the uppercase one (A/a, G/g, Q/q...) saved for last.
+  const MATCH_EASY = ['C', 'K', 'O', 'S', 'U', 'V', 'W', 'X', 'Z'];
+  const MATCH_MEDIUM = ['I', 'J', 'L', 'M', 'N', 'P', 'T', 'Y'];
+  const MATCH_HARD = ['A', 'B', 'D', 'E', 'F', 'G', 'H', 'Q', 'R'];
+  const MATCH_LETTERS = [...MATCH_EASY, ...MATCH_MEDIUM, ...MATCH_HARD];
+  const MATCH_POOL_SIZE = [5, 9, 11, 13, 15, 17, 19, 21, 24, 26]; // per level 1-10
+  const MATCH_PAIRS = [2, 2, 3, 3, 4, 4, 5, 5, 6, 6]; // simultaneous pairs per level 1-10
+
+  let currentMatchLevel = 1;
+  let matchSelectedTile = null;
+  let matchMatchedCount = 0;
+  let matchPairsCount = 0;
+
+  function openMatch() {
+    showScreen('match-screen');
+    updateMatchLevelBtn();
+    newMatchRound();
+  }
+
+  function updateMatchLevelBtn() {
+    const btn = document.getElementById('matchLevelBtn');
+    btn.textContent = currentMatchLevel;
+    btn.style.background = levelColor(currentMatchLevel);
+  }
+
+  function openMatchLevelPicker() {
+    const grid = document.getElementById('matchLevelGrid');
+    grid.innerHTML = '';
+    for (let n = 1; n <= 10; n++) {
+      const btn = document.createElement('button');
+      btn.className = 'level-option-btn' + (n === currentMatchLevel ? ' current' : '');
+      btn.style.background = levelColor(n);
+      btn.textContent = n;
+      btn.onclick = () => {
+        currentMatchLevel = n;
+        updateMatchLevelBtn();
+        document.getElementById('matchLevelPicker').classList.add('hidden');
+        speak('Level ' + n);
+        newMatchRound();
+      };
+      grid.appendChild(btn);
+    }
+    document.getElementById('matchLevelPicker').classList.remove('hidden');
+  }
+
+  function closeMatchLevelPickerOnBackdrop(event) {
+    if (event.target.id === 'matchLevelPicker') event.target.classList.add('hidden');
+  }
+
+  function newMatchRound() {
+    matchSelectedTile = null;
+    matchMatchedCount = 0;
+
+    const pool = MATCH_LETTERS.slice(0, MATCH_POOL_SIZE[currentMatchLevel - 1]);
+    matchPairsCount = MATCH_PAIRS[currentMatchLevel - 1];
+    const chosen = shuffleArray(pool).slice(0, matchPairsCount);
+    const upperOrder = shuffleArray(chosen);
+    let lowerOrder = shuffleArray(chosen);
+    while (matchPairsCount > 1 && upperOrder.every((l, i) => l === lowerOrder[i])) {
+      lowerOrder = shuffleArray(chosen);
+    }
+
+    const upperCol = document.getElementById('matchColUpper');
+    const lowerCol = document.getElementById('matchColLower');
+    upperCol.innerHTML = '';
+    lowerCol.innerHTML = '';
+
+    upperOrder.forEach(letter => {
+      const tile = document.createElement('button');
+      tile.className = 'match-tile';
+      tile.textContent = letter;
+      tile.dataset.letter = letter;
+      tile.dataset.side = 'upper';
+      tile.onclick = () => handleMatchTileTap(tile);
+      upperCol.appendChild(tile);
+    });
+    lowerOrder.forEach(letter => {
+      const tile = document.createElement('button');
+      tile.className = 'match-tile';
+      tile.textContent = letter.toLowerCase();
+      tile.dataset.letter = letter;
+      tile.dataset.side = 'lower';
+      tile.onclick = () => handleMatchTileTap(tile);
+      lowerCol.appendChild(tile);
+    });
+
+    currentReplay = () => speak('Match the big letters to the little letters!');
+    setTimeout(currentReplay, 500);
+  }
+
+  function handleMatchTileTap(tile) {
+    if (tile.classList.contains('matched')) return;
+
+    if (!matchSelectedTile) {
+      tile.classList.add('selected');
+      matchSelectedTile = tile;
+      speak(tile.dataset.letter);
+      return;
+    }
+
+    if (matchSelectedTile === tile) {
+      tile.classList.remove('selected');
+      matchSelectedTile = null;
+      return;
+    }
+
+    if (matchSelectedTile.dataset.side === tile.dataset.side) {
+      matchSelectedTile.classList.remove('selected');
+      tile.classList.add('selected');
+      matchSelectedTile = tile;
+      speak(tile.dataset.letter);
+      return;
+    }
+
+    if (matchSelectedTile.dataset.letter === tile.dataset.letter) {
+      matchSelectedTile.classList.remove('selected');
+      matchSelectedTile.classList.add('matched', 'correct-flash');
+      tile.classList.add('matched', 'correct-flash');
+      speak(tile.dataset.letter);
+      playDing();
+      matchSelectedTile = null;
+      matchMatchedCount++;
+      if (matchMatchedCount === matchPairsCount) {
+        setTimeout(() => onMatchRoundWin(), 500);
+      }
+    } else {
+      tryAgain(tile);
+    }
+  }
+
+  function onMatchRoundWin() {
+    if (currentMatchLevel < 10) {
+      currentMatchLevel++;
+      updateMatchLevelBtn();
+      celebrateLevelUp(currentMatchLevel, () => newMatchRound());
+    } else {
+      celebrate(() => newMatchRound());
+    }
   }
 
   if ('serviceWorker' in navigator) {
