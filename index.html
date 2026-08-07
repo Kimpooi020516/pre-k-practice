@@ -405,24 +405,71 @@
   // ================= LETTERS =================
   const LETTER_WORDS = {
     A: [{ emoji: '🍎', word: 'apple' }, { emoji: '🐜', word: 'ant' }, { emoji: '✈️', word: 'airplane' }],
-    S: [{ emoji: '☀️', word: 'sun' }, { emoji: '🐍', word: 'snake' }, { emoji: '⭐', word: 'star' }],
-    M: [{ emoji: '🌙', word: 'moon' }, { emoji: '🐒', word: 'monkey' }, { emoji: '🐭', word: 'mouse' }],
+    B: [{ emoji: '⚽', word: 'ball' }, { emoji: '🍌', word: 'banana' }, { emoji: '🦋', word: 'butterfly' }],
+    C: [{ emoji: '🐱', word: 'cat' }, { emoji: '🚗', word: 'car' }, { emoji: '🎂', word: 'cake' }],
+    D: [{ emoji: '🐶', word: 'dog' }, { emoji: '🦆', word: 'duck' }, { emoji: '🥁', word: 'drum' }],
+    E: [{ emoji: '🐘', word: 'elephant' }, { emoji: '🥚', word: 'egg' }, { emoji: '👂', word: 'ear' }],
+    F: [{ emoji: '🐟', word: 'fish' }, { emoji: '🐸', word: 'frog' }, { emoji: '🌸', word: 'flower' }],
+    G: [{ emoji: '🍇', word: 'grapes' }, { emoji: '🎸', word: 'guitar' }, { emoji: '🐐', word: 'goat' }],
+    H: [{ emoji: '🎩', word: 'hat' }, { emoji: '🐴', word: 'horse' }, { emoji: '❤️', word: 'heart' }],
+    I: [{ emoji: '🐛', word: 'insect' }, { emoji: '🍦', word: 'ice cream' }, { emoji: '🏝️', word: 'island' }],
+    J: [{ emoji: '🧃', word: 'juice' }, { emoji: '🪼', word: 'jellyfish' }, { emoji: '👖', word: 'jeans' }],
+    K: [{ emoji: '🪁', word: 'kite' }, { emoji: '🐨', word: 'koala' }, { emoji: '🔑', word: 'key' }],
     L: [{ emoji: '🦁', word: 'lion' }, { emoji: '🍃', word: 'leaf' }, { emoji: '🍭', word: 'lollipop' }],
+    M: [{ emoji: '🌙', word: 'moon' }, { emoji: '🐒', word: 'monkey' }, { emoji: '🐭', word: 'mouse' }],
+    N: [{ emoji: '👃', word: 'nose' }, { emoji: '🍜', word: 'noodles' }, { emoji: '📿', word: 'necklace' }],
+    O: [{ emoji: '🍊', word: 'orange' }, { emoji: '🐙', word: 'octopus' }, { emoji: '🦉', word: 'owl' }],
+    P: [{ emoji: '🐷', word: 'pig' }, { emoji: '🍕', word: 'pizza' }, { emoji: '🎃', word: 'pumpkin' }],
+    Q: [{ emoji: '👸', word: 'queen' }, { emoji: '❓', word: 'question mark' }],
+    R: [{ emoji: '🌈', word: 'rainbow' }, { emoji: '🐰', word: 'rabbit' }, { emoji: '🤖', word: 'robot' }],
+    S: [{ emoji: '☀️', word: 'sun' }, { emoji: '🐍', word: 'snake' }, { emoji: '⭐', word: 'star' }],
+    T: [{ emoji: '🐢', word: 'turtle' }, { emoji: '🌳', word: 'tree' }, { emoji: '🚂', word: 'train' }],
+    U: [{ emoji: '☂️', word: 'umbrella' }, { emoji: '🦄', word: 'unicorn' }, { emoji: '⬆️', word: 'up arrow' }],
+    V: [{ emoji: '🚐', word: 'van' }, { emoji: '🎻', word: 'violin' }, { emoji: '🌋', word: 'volcano' }],
+    W: [{ emoji: '🍉', word: 'watermelon' }, { emoji: '🐳', word: 'whale' }, { emoji: '⌚', word: 'watch' }],
+    X: [{ emoji: '🩻', word: 'x-ray' }],
+    Y: [{ emoji: '🪀', word: 'yo-yo' }, { emoji: '🧶', word: 'yarn' }],
+    Z: [{ emoji: '🦓', word: 'zebra' }, { emoji: '0️⃣', word: 'zero' }],
   };
   const LETTER_SOUNDS = {
     A: 'A. A says, ah, ah, apple.',
-    S: 'S. S says, sss, sss, snake.',
-    M: 'M. M says, mmm, mmm, monkey.',
+    B: 'B. B says, buh, buh, ball.',
+    C: 'C. C says, kuh, kuh, cat.',
+    D: 'D. D says, duh, duh, dog.',
+    E: 'E. E says, eh, eh, elephant.',
+    F: 'F. F says, ffff, ffff, fish.',
+    G: 'G. G says, guh, guh, grapes.',
+    H: 'H. H says, huh, huh, hat.',
+    I: 'I. I says, ih, ih, insect.',
+    J: 'J. J says, juh, juh, juice.',
+    K: 'K. K says, kuh, kuh, kite.',
     L: 'L. L says, lll, lll, lion.',
+    M: 'M. M says, mmm, mmm, monkey.',
+    N: 'N. N says, nnn, nnn, nose.',
+    O: 'O. O says, ah, ah, octopus.',
+    P: 'P. P says, puh, puh, pig.',
+    Q: 'Q. Q says, kwuh, kwuh, queen.',
+    R: 'R. R says, rrr, rrr, rainbow.',
+    S: 'S. S says, sss, sss, snake.',
+    T: 'T. T says, tuh, tuh, turtle.',
+    U: 'U. U says, uh, uh, umbrella.',
+    V: 'V. V says, vvv, vvv, van.',
+    W: 'W. W says, wuh, wuh, watermelon.',
+    X: 'X. X says, eks, eks, x-ray.',
+    Y: 'Y. Y says, yuh, yuh, yo-yo.',
+    Z: 'Z. Z says, zzz, zzz, zebra.',
   };
-  const LETTER_COLORS = { A: 'var(--red)', S: 'var(--blue)', M: 'var(--green)', L: 'var(--purple)' };
+  const LETTER_PALETTE = ['var(--red)', 'var(--blue)', 'var(--green)', 'var(--purple)', 'var(--orange)', 'var(--teal)', 'var(--pink)'];
+  const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  const LETTER_COLORS = {};
+  ALPHABET.forEach((l, i) => { LETTER_COLORS[l] = LETTER_PALETTE[i % LETTER_PALETTE.length]; });
 
   let currentLetter = 'A';
 
   function openLetters() { showScreen('letters-screen'); newLetterRound(); }
 
   function newLetterRound() {
-    const letters = ['A', 'S', 'M', 'L'];
+    const letters = ALPHABET;
     currentLetter = pickRandom(letters);
     const displayChar = Math.random() < 0.5 ? currentLetter : currentLetter.toLowerCase();
     const disp = document.getElementById('letterDisplay');
