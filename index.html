@@ -95,6 +95,7 @@
   .home-card.colors  { background: linear-gradient(160deg, var(--purple), var(--pink)); }
   .home-card.lines   { background: linear-gradient(160deg, var(--orange), var(--yellow)); }
   .home-card.match   { background: linear-gradient(160deg, var(--green), var(--purple)); }
+  .home-card.trucks  { background: linear-gradient(160deg, #ffcc00, var(--orange)); }
 
   @media (max-width: 480px) {
     .home-card { flex-basis: 100%; max-width: 100%; }
@@ -350,6 +351,9 @@
       <button class="home-card match" onclick="openMatch()">
         <span class="home-emoji">🔠🔡</span><span>Match</span>
       </button>
+      <button class="home-card trucks" onclick="openTrucks()">
+        <span class="home-emoji">🚧</span><span>Trucks</span>
+      </button>
     </div>
   </main>
 
@@ -409,6 +413,14 @@
       <div class="level-grid" id="matchLevelGrid"></div>
     </div>
   </div>
+
+  <section id="trucks-screen" class="screen hidden">
+    <div class="tabs">
+      <button class="tab-btn" id="truckTabLearn" onclick="setTrucksMode('learn')">👀</button>
+      <button class="tab-btn" id="truckTabQuiz" onclick="setTrucksMode('quiz')">🎯</button>
+    </div>
+    <div id="trucksContent"></div>
+  </section>
 
   <div id="celebration" class="celebration hidden"></div>
 
@@ -1181,6 +1193,244 @@
     } else {
       celebrate(() => newMatchRound());
     }
+  }
+
+  // ================= TRUCKS =================
+  // Hand-drawn SVG icons: there's no emoji coverage for most construction
+  // vehicles, so each one is built from simple shapes on a shared 220x140
+  // canvas (same technique as the Lines module's line drawings).
+  const VEH_YEL = '#ffcc00';
+  const VEH_YELD = '#e0a500';
+  const VEH_STEEL = '#78828c';
+  const VEH_STEELD = '#4b5563';
+  const VEH_GLASS = '#bde3ff';
+  const VEH_INK = '#232323';
+  const VEH_RED = '#e63946';
+
+  function vehWheel(cx, cy, r) {
+    r = r || 15;
+    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${VEH_INK}"/><circle cx="${cx}" cy="${cy}" r="${r * 0.42}" fill="#9ca3af"/>`;
+  }
+
+  function vehTrack(x, y, w, h) {
+    h = h || 22;
+    const r = h / 2;
+    let s = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${VEH_INK}"/>`;
+    const n = 4;
+    for (let i = 0; i < n; i++) {
+      const cx = x + r + i * ((w - 2 * r) / (n - 1));
+      s += `<circle cx="${cx}" cy="${y + h / 2}" r="${r * 0.6}" fill="#5b6472"/>`;
+    }
+    return s;
+  }
+
+  const VEHICLE_BUILDERS = {
+    dumptruck: () => `
+      <polygon points="78,55 200,42 206,112 82,112" fill="${VEH_YEL}"/>
+      <polygon points="78,55 200,42 204,50 82,63" fill="${VEH_YELD}"/>
+      <rect x="18" y="68" width="55" height="44" rx="8" fill="${VEH_YEL}"/>
+      <rect x="26" y="76" width="28" height="20" rx="4" fill="${VEH_GLASS}"/>
+      <rect x="18" y="112" width="188" height="8" fill="${VEH_STEELD}"/>
+      ${vehWheel(50, 122)}${vehWheel(90, 122)}${vehWheel(178, 122)}
+    `,
+    skidsteer: () => `
+      <rect x="40" y="70" width="130" height="48" rx="10" fill="${VEH_YEL}"/>
+      <rect x="95" y="76" width="65" height="34" rx="6" fill="${VEH_GLASS}"/>
+      <path d="M45 100 L18 80" stroke="${VEH_STEELD}" stroke-width="8" stroke-linecap="round"/>
+      <path d="M45 112 L18 92" stroke="${VEH_STEELD}" stroke-width="8" stroke-linecap="round"/>
+      <polygon points="6,70 30,70 26,92 2,92" fill="${VEH_STEEL}"/>
+      ${vehWheel(55, 122, 17)}${vehWheel(150, 122, 17)}
+    `,
+    excavator: () => `
+      ${vehTrack(15, 110, 150, 24)}
+      <ellipse cx="95" cy="95" rx="42" ry="20" fill="${VEH_YEL}"/>
+      <rect x="72" y="66" width="40" height="30" rx="8" fill="${VEH_YEL}"/>
+      <rect x="80" y="73" width="18" height="16" rx="3" fill="${VEH_GLASS}"/>
+      <path d="M104 76 L150 50" stroke="${VEH_STEELD}" stroke-width="11" stroke-linecap="round"/>
+      <path d="M150 50 L182 66" stroke="${VEH_STEELD}" stroke-width="9" stroke-linecap="round"/>
+      <path d="M182 66 L200 78 L182 92 L168 84 Z" fill="${VEH_STEEL}"/>
+    `,
+    fueltruck: () => `
+      <rect x="20" y="72" width="50" height="40" rx="8" fill="${VEH_YEL}"/>
+      <rect x="27" y="79" width="26" height="18" rx="4" fill="${VEH_GLASS}"/>
+      <rect x="75" y="62" width="125" height="50" rx="25" fill="#ffffff" stroke="${VEH_STEELD}" stroke-width="3"/>
+      <rect x="75" y="84" width="125" height="10" fill="${VEH_RED}"/>
+      <rect x="20" y="112" width="180" height="8" fill="${VEH_STEELD}"/>
+      ${vehWheel(55, 122)}${vehWheel(95, 122)}${vehWheel(175, 122)}
+    `,
+    mixer: () => `
+      <rect x="20" y="74" width="48" height="38" rx="8" fill="${VEH_YEL}"/>
+      <rect x="27" y="80" width="24" height="18" rx="4" fill="${VEH_GLASS}"/>
+      <g transform="rotate(-15 140 78)">
+        <ellipse cx="140" cy="78" rx="52" ry="32" fill="${VEH_YEL}"/>
+        <path d="M92 70 Q140 50 188 70" stroke="${VEH_YELD}" stroke-width="6" fill="none"/>
+        <path d="M92 86 Q140 66 188 86" stroke="${VEH_YELD}" stroke-width="6" fill="none"/>
+      </g>
+      <rect x="20" y="112" width="180" height="8" fill="${VEH_STEELD}"/>
+      ${vehWheel(55, 122)}${vehWheel(95, 122)}${vehWheel(175, 122)}
+    `,
+    flatbed: () => `
+      <rect x="20" y="68" width="50" height="44" rx="8" fill="${VEH_YEL}"/>
+      <rect x="27" y="75" width="26" height="20" rx="4" fill="${VEH_GLASS}"/>
+      <rect x="74" y="92" width="130" height="6" fill="${VEH_YEL}"/>
+      <rect x="74" y="98" width="130" height="14" rx="3" fill="${VEH_YELD}"/>
+      ${vehWheel(55, 122)}${vehWheel(95, 122)}${vehWheel(175, 122)}
+    `,
+    bulldozer: () => `
+      ${vehTrack(30, 108, 150, 24)}
+      <rect x="60" y="72" width="90" height="36" rx="8" fill="${VEH_YEL}"/>
+      <rect x="95" y="48" width="42" height="28" rx="6" fill="${VEH_YEL}"/>
+      <rect x="100" y="53" width="30" height="18" rx="3" fill="${VEH_GLASS}"/>
+      <rect x="15" y="60" width="18" height="56" rx="4" fill="${VEH_STEEL}"/>
+      <rect x="33" y="90" width="30" height="8" fill="${VEH_STEELD}"/>
+    `,
+    roadroller: () => `
+      <rect x="20" y="98" width="55" height="34" rx="16" fill="${VEH_INK}"/>
+      <ellipse cx="47" cy="115" rx="24" ry="7" fill="#444"/>
+      <rect x="70" y="66" width="90" height="44" rx="10" fill="${VEH_YEL}"/>
+      <rect x="85" y="72" width="35" height="24" rx="5" fill="${VEH_GLASS}"/>
+      <rect x="163" y="102" width="45" height="28" rx="14" fill="${VEH_INK}"/>
+    `,
+    frontloader: () => `
+      <rect x="55" y="70" width="110" height="42" rx="10" fill="${VEH_YEL}"/>
+      <rect x="95" y="76" width="50" height="28" rx="6" fill="${VEH_GLASS}"/>
+      <path d="M60 100 L18 65" stroke="${VEH_STEELD}" stroke-width="10" stroke-linecap="round"/>
+      <path d="M60 112 L18 80" stroke="${VEH_STEELD}" stroke-width="9" stroke-linecap="round"/>
+      <polygon points="4,55 34,55 30,80 0,80" fill="${VEH_STEEL}"/>
+      ${vehWheel(70, 122, 20)}${vehWheel(165, 122, 20)}
+    `,
+    crane: () => `
+      ${vehTrack(30, 110, 110, 22)}
+      <rect x="30" y="86" width="18" height="20" rx="3" fill="${VEH_STEEL}"/>
+      <rect x="45" y="78" width="60" height="30" rx="8" fill="${VEH_YEL}"/>
+      <rect x="52" y="84" width="24" height="18" rx="4" fill="${VEH_GLASS}"/>
+      <path d="M85 82 L168 18" stroke="${VEH_STEELD}" stroke-width="10" stroke-linecap="round"/>
+      <line x1="168" y1="18" x2="168" y2="68" stroke="${VEH_INK}" stroke-width="2"/>
+      <path d="M162 68 q6 12 12 0" stroke="${VEH_INK}" stroke-width="3" fill="none"/>
+    `,
+    backhoe: () => `
+      <rect x="45" y="76" width="110" height="36" rx="8" fill="${VEH_YEL}"/>
+      <rect x="80" y="48" width="45" height="32" rx="6" fill="${VEH_YEL}"/>
+      <rect x="86" y="54" width="33" height="20" rx="4" fill="${VEH_GLASS}"/>
+      <path d="M50 96 L18 70" stroke="${VEH_STEELD}" stroke-width="9" stroke-linecap="round"/>
+      <polygon points="4,60 30,60 26,82 0,82" fill="${VEH_STEEL}"/>
+      <path d="M150 82 L190 55 L206 78" stroke="${VEH_STEELD}" stroke-width="8" fill="none" stroke-linecap="round"/>
+      <polygon points="198,74 216,82 202,94" fill="${VEH_STEEL}"/>
+      ${vehWheel(55, 122, 14)}${vehWheel(175, 122, 20)}
+    `,
+    forklift: () => `
+      <rect x="50" y="78" width="100" height="34" rx="8" fill="${VEH_YEL}"/>
+      <line x1="95" y1="80" x2="95" y2="50" stroke="${VEH_STEELD}" stroke-width="6"/>
+      <line x1="140" y1="80" x2="140" y2="50" stroke="${VEH_STEELD}" stroke-width="6"/>
+      <line x1="95" y1="50" x2="140" y2="50" stroke="${VEH_STEELD}" stroke-width="6"/>
+      <rect x="100" y="60" width="30" height="16" rx="3" fill="${VEH_GLASS}"/>
+      <rect x="35" y="45" width="6" height="75" fill="${VEH_STEEL}"/>
+      <rect x="47" y="45" width="6" height="75" fill="${VEH_STEEL}"/>
+      <rect x="32" y="95" width="22" height="22" fill="${VEH_STEEL}"/>
+      <rect x="6" y="112" width="35" height="6" fill="${VEH_STEELD}"/>
+      <rect x="6" y="104" width="35" height="6" fill="${VEH_STEELD}"/>
+      ${vehWheel(60, 122, 15)}${vehWheel(140, 122, 15)}
+    `,
+    grader: () => `
+      <rect x="45" y="100" width="130" height="10" fill="${VEH_STEELD}"/>
+      <rect x="140" y="62" width="55" height="40" rx="8" fill="${VEH_YEL}"/>
+      <rect x="148" y="68" width="32" height="22" rx="4" fill="${VEH_GLASS}"/>
+      <rect x="80" y="110" width="60" height="10" rx="3" fill="${VEH_STEEL}"/>
+      ${vehWheel(45, 122, 14)}${vehWheel(85, 122, 14)}${vehWheel(175, 122, 16)}
+    `,
+    garbagetruck: () => `
+      <rect x="76" y="50" width="125" height="62" rx="8" fill="${VEH_STEEL}"/>
+      <rect x="76" y="50" width="125" height="14" rx="4" fill="${VEH_STEELD}"/>
+      <rect x="76" y="90" width="125" height="8" fill="${VEH_YEL}"/>
+      <rect x="20" y="70" width="50" height="42" rx="8" fill="${VEH_YEL}"/>
+      <rect x="27" y="77" width="26" height="20" rx="4" fill="${VEH_GLASS}"/>
+      ${vehWheel(55, 122)}${vehWheel(90, 122)}${vehWheel(170, 122)}
+    `,
+    cherrypicker: () => `
+      <rect x="74" y="98" width="90" height="16" rx="4" fill="${VEH_YELD}"/>
+      <rect x="20" y="72" width="48" height="40" rx="8" fill="${VEH_YEL}"/>
+      <rect x="27" y="79" width="24" height="18" rx="4" fill="${VEH_GLASS}"/>
+      <path d="M110 98 L130 45" stroke="${VEH_STEELD}" stroke-width="9" stroke-linecap="round"/>
+      <path d="M130 45 L165 30" stroke="${VEH_STEELD}" stroke-width="8" stroke-linecap="round"/>
+      <rect x="160" y="20" width="22" height="18" rx="4" fill="${VEH_STEEL}"/>
+      ${vehWheel(55, 122)}${vehWheel(95, 122)}${vehWheel(150, 122)}
+    `,
+  };
+
+  function vehicleSvg(id, size) {
+    const vbW = 220, vbH = 140;
+    const h = size * vbH / vbW;
+    return `<svg viewBox="0 0 ${vbW} ${vbH}" width="${size}" height="${h}">${VEHICLE_BUILDERS[id]()}</svg>`;
+  }
+
+  const VEHICLES = [
+    { id: 'dumptruck', name: 'Dump Truck', fact: 'Dump Truck! It carries rocks and dirt, and tips them out!' },
+    { id: 'skidsteer', name: 'Skid Steer Loader', fact: 'Skid Steer Loader! A small strong machine that scoops and lifts!' },
+    { id: 'excavator', name: 'Excavator', fact: 'Excavator! It digs big holes with its bucket!' },
+    { id: 'fueltruck', name: 'Fuel Truck', fact: 'Fuel Truck! It fills up the other trucks with fuel!' },
+    { id: 'mixer', name: 'Concrete Mixer', fact: 'Concrete Mixer! Its drum spins around to mix the concrete!' },
+    { id: 'flatbed', name: 'Flat Bed Truck', fact: 'Flat Bed Truck! It carries big flat loads!' },
+    { id: 'bulldozer', name: 'Bulldozer', fact: 'Bulldozer! It pushes dirt with its big blade!' },
+    { id: 'roadroller', name: 'Road Roller', fact: 'Road Roller! It flattens the road nice and smooth!' },
+    { id: 'frontloader', name: 'Front Loader', fact: 'Front Loader! It scoops and carries with its big bucket!' },
+    { id: 'crane', name: 'Crane', fact: 'Crane! It lifts heavy things way up high!' },
+    { id: 'backhoe', name: 'Backhoe Loader', fact: 'Backhoe Loader! A bucket in front, and a digger in back!' },
+    { id: 'forklift', name: 'Forklift', fact: 'Forklift! It lifts heavy things on its forks!' },
+    { id: 'grader', name: 'Grader', fact: 'Grader! It smooths and flattens the ground!' },
+    { id: 'garbagetruck', name: 'Garbage Truck', fact: 'Garbage Truck! It picks up all the trash!' },
+    { id: 'cherrypicker', name: 'Cherry Picker', fact: 'Cherry Picker! Its arm lifts workers way up high!' },
+  ];
+
+  let trucksMode = 'learn';
+  let truckLearnIndex = 0;
+
+  function openTrucks() { showScreen('trucks-screen'); setTrucksMode('learn'); }
+
+  function setTrucksMode(mode) {
+    trucksMode = mode;
+    document.getElementById('truckTabLearn').classList.toggle('active', mode === 'learn');
+    document.getElementById('truckTabQuiz').classList.toggle('active', mode === 'quiz');
+    if (mode === 'learn') { truckLearnIndex = 0; renderTruckLearn(); } else newTruckQuizRound();
+  }
+
+  function renderTruckLearn() {
+    const content = document.getElementById('trucksContent');
+    const veh = VEHICLES[truckLearnIndex];
+    content.innerHTML = `
+      <button class="line-display-btn" id="truckDisplayBtn">${vehicleSvg(veh.id, 260)}</button>
+      <button class="next-btn" id="nextTruckBtn">➡️</button>
+    `;
+    document.getElementById('truckDisplayBtn').onclick = () => speak(veh.fact);
+    document.getElementById('nextTruckBtn').onclick = () => {
+      truckLearnIndex = (truckLearnIndex + 1) % VEHICLES.length;
+      renderTruckLearn();
+    };
+    currentReplay = () => speak(veh.fact);
+    setTimeout(currentReplay, 400);
+  }
+
+  function newTruckQuizRound() {
+    const trio = shuffleArray(VEHICLES).slice(0, 3);
+    const target = pickRandom(trio);
+    const content = document.getElementById('trucksContent');
+    content.innerHTML = '<div class="options-row" id="truckOptions"></div>';
+    const row = document.getElementById('truckOptions');
+    shuffleArray(trio).forEach(veh => {
+      const btn = document.createElement('button');
+      btn.className = 'line-option-btn';
+      btn.innerHTML = vehicleSvg(veh.id, 150);
+      btn.onclick = () => {
+        if (veh.id === target.id) {
+          btn.classList.add('correct-flash');
+          celebrate(() => newTruckQuizRound());
+        } else {
+          tryAgain(btn);
+        }
+      };
+      row.appendChild(btn);
+    });
+    currentReplay = () => speak('Tap the ' + target.name + '!');
+    setTimeout(currentReplay, 500);
   }
 
   if ('serviceWorker' in navigator) {
