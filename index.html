@@ -123,6 +123,42 @@
   .tab-btn.active { opacity: 1; box-shadow: 0 6px 0 rgba(0,0,0,.15), 0 0 0 5px var(--yellow); }
   .tab-btn:active { transform: translateY(6px); }
 
+  .level-btn { opacity: 1; font-weight: 900; font-size: 2rem; color: #fff; }
+
+  .level-picker {
+    position: fixed; inset: 0;
+    background: rgba(58,46,80,.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 600;
+    padding: 20px;
+  }
+  .level-picker-card {
+    background: #fff;
+    border-radius: 40px;
+    padding: 30px;
+    box-shadow: 0 12px 0 rgba(0,0,0,.2);
+  }
+  .level-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 100px);
+    gap: 16px;
+  }
+  .level-option-btn {
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    border: none;
+    font-size: 2.4rem;
+    font-weight: 900;
+    color: #fff;
+    box-shadow: 0 6px 0 rgba(0,0,0,.2);
+  }
+  .level-option-btn:active { transform: translateY(6px); }
+  .level-option-btn.current { box-shadow: 0 6px 0 rgba(0,0,0,.2), 0 0 0 6px var(--ink); }
+
+  @media (max-width: 560px) {
+    .level-grid { grid-template-columns: repeat(2, 100px); }
+  }
+
   /* ---------- Letters ---------- */
   .letter-display {
     background: #fff;
@@ -272,9 +308,18 @@
   </main>
 
   <section id="letters-screen" class="screen hidden">
+    <div class="tabs">
+      <button class="tab-btn level-btn" id="levelBtn" onclick="openLevelPicker()">1</button>
+    </div>
     <div class="letter-display" id="letterDisplay" onclick="replayPrompt()">A</div>
     <div class="options-row" id="letterOptions"></div>
   </section>
+
+  <div id="levelPicker" class="level-picker hidden" onclick="closeLevelPickerOnBackdrop(event)">
+    <div class="level-picker-card">
+      <div class="level-grid" id="levelGrid"></div>
+    </div>
+  </div>
 
   <section id="numbers-screen" class="screen hidden">
     <div class="tabs">
@@ -464,26 +509,81 @@
   const LETTER_COLORS = {};
   ALPHABET.forEach((l, i) => { LETTER_COLORS[l] = LETTER_PALETTE[i % LETTER_PALETTE.length]; });
 
-  let currentLetter = 'A';
+  // Cumulative per-level letter pool, ordered easiest-to-recognize first
+  // (iconic pictures like apple/ball/cat) toward hardest last (queen/x-ray/zero).
+  const LETTER_LEVELS = [
+    ['A', 'S', 'M', 'L'], // level 1
+    ['B', 'T'],           // level 2
+    ['C', 'D'],           // level 3
+    ['O', 'P'],           // level 4
+    ['F', 'H'],           // level 5
+    ['G', 'R'],           // level 6
+    ['N', 'E', 'I'],      // level 7
+    ['K', 'W', 'J'],      // level 8
+    ['U', 'V', 'Y'],      // level 9
+    ['Q', 'X', 'Z'],      // level 10
+  ];
+  function lettersForLevel(level) { return LETTER_LEVELS.slice(0, level).flat(); }
+  function levelColor(level) { return `hsl(${120 - (level - 1) * (120 / 9)}, 70%, 52%)`; }
 
-  function openLetters() { showScreen('letters-screen'); newLetterRound(); }
+  let currentLetter = 'A';
+  let currentLevel = 1;
+
+  function openLetters() {
+    showScreen('letters-screen');
+    updateLevelBtn();
+    newLetterRound();
+  }
+
+  function updateLevelBtn() {
+    const btn = document.getElementById('levelBtn');
+    btn.textContent = currentLevel;
+    btn.style.background = levelColor(currentLevel);
+  }
+
+  function openLevelPicker() {
+    const grid = document.getElementById('levelGrid');
+    grid.innerHTML = '';
+    for (let n = 1; n <= 10; n++) {
+      const btn = document.createElement('button');
+      btn.className = 'level-option-btn' + (n === currentLevel ? ' current' : '');
+      btn.style.background = levelColor(n);
+      btn.textContent = n;
+      btn.onclick = () => {
+        currentLevel = n;
+        updateLevelBtn();
+        document.getElementById('levelPicker').classList.add('hidden');
+        speak('Level ' + n);
+        newLetterRound();
+      };
+      grid.appendChild(btn);
+    }
+    document.getElementById('levelPicker').classList.remove('hidden');
+  }
+
+  function closeLevelPickerOnBackdrop(event) {
+    if (event.target.id === 'levelPicker') event.target.classList.add('hidden');
+  }
 
   function newLetterRound() {
-    const letters = ALPHABET;
+    const letters = lettersForLevel(currentLevel);
     currentLetter = pickRandom(letters);
-    const displayChar = Math.random() < 0.5 ? currentLetter : currentLetter.toLowerCase();
+
+    // Higher levels show lowercase more often (harder to recognize than uppercase).
+    const lowercaseChance = Math.min(0.5, (currentLevel - 1) * 0.06);
+    const displayChar = Math.random() < lowercaseChance ? currentLetter.toLowerCase() : currentLetter;
     const disp = document.getElementById('letterDisplay');
     disp.textContent = displayChar;
     disp.style.color = LETTER_COLORS[currentLetter];
 
+    // Higher levels add extra picture choices (harder pick among more options).
+    const numChoices = currentLevel >= 7 ? 4 : 3;
     const correctItem = pickRandom(LETTER_WORDS[currentLetter]);
     const otherLetters = shuffleArray(letters.filter(l => l !== currentLetter));
-    const distractor1 = pickRandom(LETTER_WORDS[otherLetters[0]]);
-    const distractor2 = pickRandom(LETTER_WORDS[otherLetters[1]]);
+    const distractors = otherLetters.slice(0, numChoices - 1).map(l => pickRandom(LETTER_WORDS[l]));
     const options = shuffleArray([
       { ...correctItem, correct: true },
-      { ...distractor1, correct: false },
-      { ...distractor2, correct: false },
+      ...distractors.map(d => ({ ...d, correct: false })),
     ]);
 
     const row = document.getElementById('letterOptions');
