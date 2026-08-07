@@ -252,10 +252,21 @@
 
   /* ---------- Alphabet Match ---------- */
   .match-board {
+    position: relative;
     display: flex;
-    gap: clamp(30px, 10vw, 90px);
+    gap: clamp(60px, 16vw, 160px);
     justify-content: center;
   }
+  .match-lines-svg {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 2;
+    overflow: visible;
+  }
+  .match-lines-svg .hidden-line { opacity: 0; }
+  .match-lines-svg .match-line-temp { stroke: var(--ink); stroke-width: 10; stroke-linecap: round; }
+  .match-lines-svg .match-line-solid { stroke-width: 10; stroke-linecap: round; opacity: .8; }
   .match-col {
     display: flex; flex-direction: column;
     gap: 14px;
@@ -270,9 +281,12 @@
     color: var(--ink);
     box-shadow: 0 8px 0 rgba(0,0,0,.15);
     display: flex; align-items: center; justify-content: center;
+    touch-action: none;
+    position: relative;
+    z-index: 3;
   }
   .match-tile:active { transform: translateY(6px); }
-  .match-tile.selected { box-shadow: 0 8px 0 rgba(0,0,0,.15), 0 0 0 6px var(--yellow); }
+  .match-tile.target-hover { box-shadow: 0 8px 0 rgba(0,0,0,.15), 0 0 0 6px var(--yellow); }
   .match-tile.matched { opacity: .3; box-shadow: none; background: #d7ffd9; pointer-events: none; }
 
   /* ---------- Feedback ---------- */
@@ -382,6 +396,9 @@
       <button class="tab-btn level-btn" id="matchLevelBtn" onclick="openMatchLevelPicker()">1</button>
     </div>
     <div class="match-board" id="matchBoard">
+      <svg id="matchLinesSvg" class="match-lines-svg">
+        <line id="matchTempLine" class="match-line-temp hidden-line"></line>
+      </svg>
       <div class="match-col" id="matchColUpper"></div>
       <div class="match-col" id="matchColLower"></div>
     </div>
@@ -955,10 +972,14 @@
   const MATCH_POOL_SIZE = [5, 9, 11, 13, 15, 17, 19, 21, 24, 26]; // per level 1-10
   const MATCH_PAIRS = [2, 2, 3, 3, 4, 4, 5, 5, 6, 6]; // simultaneous pairs per level 1-10
 
+  const MATCH_LINE_COLORS = ['#ff4d4d', '#3b82f6', '#4caf50', '#a259e6', '#ff9f40', '#2ec4b6'];
+  const MATCH_SNAP_RADIUS = 70; // px — generous, so a toddler's imprecise drag still "catches" the target
+
   let currentMatchLevel = 1;
-  let matchSelectedTile = null;
   let matchMatchedCount = 0;
   let matchPairsCount = 0;
+  let matchDragSource = null; // tile the current drag started from
+  let matchHoverTarget = null; // opposite-side tile currently snapped to
 
   function openMatch() {
     showScreen('match-screen');
@@ -997,7 +1018,8 @@
   }
 
   function newMatchRound() {
-    matchSelectedTile = null;
+    matchDragSource = null;
+    matchHoverTarget = null;
     matchMatchedCount = 0;
 
     const pool = MATCH_LETTERS.slice(0, MATCH_POOL_SIZE[currentMatchLevel - 1]);
@@ -1013,6 +1035,7 @@
     const lowerCol = document.getElementById('matchColLower');
     upperCol.innerHTML = '';
     lowerCol.innerHTML = '';
+    document.getElementById('matchLinesSvg').innerHTML = '<line id="matchTempLine" class="match-line-temp hidden-line"></line>';
 
     upperOrder.forEach(letter => {
       const tile = document.createElement('button');
@@ -1020,7 +1043,7 @@
       tile.textContent = letter;
       tile.dataset.letter = letter;
       tile.dataset.side = 'upper';
-      tile.onclick = () => handleMatchTileTap(tile);
+      attachMatchDragHandlers(tile);
       upperCol.appendChild(tile);
     });
     lowerOrder.forEach(letter => {
@@ -1029,52 +1052,125 @@
       tile.textContent = letter.toLowerCase();
       tile.dataset.letter = letter;
       tile.dataset.side = 'lower';
-      tile.onclick = () => handleMatchTileTap(tile);
+      attachMatchDragHandlers(tile);
       lowerCol.appendChild(tile);
     });
 
-    currentReplay = () => speak('Match the big letters to the little letters!');
+    currentReplay = () => speak('Draw a line from a big letter to its little letter!');
     setTimeout(currentReplay, 500);
   }
 
-  function handleMatchTileTap(tile) {
-    if (tile.classList.contains('matched')) return;
+  // Center of a tile in the same coordinate space as the SVG overlay (relative to #matchBoard).
+  function matchTileCenter(tile) {
+    const boardRect = document.getElementById('matchBoard').getBoundingClientRect();
+    const tileRect = tile.getBoundingClientRect();
+    return {
+      x: tileRect.left + tileRect.width / 2 - boardRect.left,
+      y: tileRect.top + tileRect.height / 2 - boardRect.top,
+    };
+  }
 
-    if (!matchSelectedTile) {
-      tile.classList.add('selected');
-      matchSelectedTile = tile;
+  function attachMatchDragHandlers(tile) {
+    tile.addEventListener('pointerdown', (e) => {
+      if (tile.classList.contains('matched') || matchDragSource) return;
+      e.preventDefault();
+      tile.setPointerCapture(e.pointerId);
+      matchDragSource = tile;
+      matchHoverTarget = null;
       speak(tile.dataset.letter);
-      return;
-    }
 
-    if (matchSelectedTile === tile) {
-      tile.classList.remove('selected');
-      matchSelectedTile = null;
-      return;
-    }
+      const c = matchTileCenter(tile);
+      const tempLine = document.getElementById('matchTempLine');
+      tempLine.setAttribute('x1', c.x);
+      tempLine.setAttribute('y1', c.y);
+      tempLine.setAttribute('x2', c.x);
+      tempLine.setAttribute('y2', c.y);
+      tempLine.classList.remove('hidden-line');
+    });
 
-    if (matchSelectedTile.dataset.side === tile.dataset.side) {
-      matchSelectedTile.classList.remove('selected');
-      tile.classList.add('selected');
-      matchSelectedTile = tile;
-      speak(tile.dataset.letter);
-      return;
-    }
+    tile.addEventListener('pointermove', (e) => {
+      if (matchDragSource !== tile) return;
+      const boardRect = document.getElementById('matchBoard').getBoundingClientRect();
+      let px = e.clientX - boardRect.left;
+      let py = e.clientY - boardRect.top;
 
-    if (matchSelectedTile.dataset.letter === tile.dataset.letter) {
-      matchSelectedTile.classList.remove('selected');
-      matchSelectedTile.classList.add('matched', 'correct-flash');
-      tile.classList.add('matched', 'correct-flash');
-      speak(tile.dataset.letter);
+      const oppSide = tile.dataset.side === 'upper' ? 'lower' : 'upper';
+      const candidates = document.querySelectorAll('.match-tile[data-side="' + oppSide + '"]:not(.matched)');
+      let nearest = null;
+      let nearestDist = Infinity;
+      candidates.forEach(c => {
+        const cc = matchTileCenter(c);
+        const d = Math.hypot(cc.x - px, cc.y - py);
+        if (d < nearestDist) { nearestDist = d; nearest = c; }
+      });
+
+      if (nearest && nearestDist < MATCH_SNAP_RADIUS) {
+        if (matchHoverTarget !== nearest) {
+          if (matchHoverTarget) matchHoverTarget.classList.remove('target-hover');
+          nearest.classList.add('target-hover');
+          matchHoverTarget = nearest;
+        }
+        const cc = matchTileCenter(nearest);
+        px = cc.x;
+        py = cc.y;
+      } else if (matchHoverTarget) {
+        matchHoverTarget.classList.remove('target-hover');
+        matchHoverTarget = null;
+      }
+
+      const tempLine = document.getElementById('matchTempLine');
+      tempLine.setAttribute('x2', px);
+      tempLine.setAttribute('y2', py);
+    });
+
+    tile.addEventListener('pointerup', (e) => {
+      if (matchDragSource !== tile) return;
+      tile.releasePointerCapture(e.pointerId);
+      finishMatchDrag();
+    });
+
+    tile.addEventListener('pointercancel', () => {
+      if (matchDragSource !== tile) return;
+      finishMatchDrag();
+    });
+  }
+
+  function finishMatchDrag() {
+    const source = matchDragSource;
+    const target = matchHoverTarget;
+    document.getElementById('matchTempLine').classList.add('hidden-line');
+    matchDragSource = null;
+    matchHoverTarget = null;
+    if (!target) return;
+
+    target.classList.remove('target-hover');
+    if (source.dataset.letter === target.dataset.letter) {
+      drawMatchSolidLine(source, target);
+      source.classList.add('matched', 'correct-flash');
+      target.classList.add('matched', 'correct-flash');
+      speak(target.dataset.letter);
       playDing();
-      matchSelectedTile = null;
       matchMatchedCount++;
       if (matchMatchedCount === matchPairsCount) {
         setTimeout(() => onMatchRoundWin(), 500);
       }
     } else {
-      tryAgain(tile);
+      tryAgain(target);
     }
+  }
+
+  function drawMatchSolidLine(a, b) {
+    const svg = document.getElementById('matchLinesSvg');
+    const ca = matchTileCenter(a);
+    const cb = matchTileCenter(b);
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', ca.x);
+    line.setAttribute('y1', ca.y);
+    line.setAttribute('x2', cb.x);
+    line.setAttribute('y2', cb.y);
+    line.setAttribute('stroke', pickRandom(MATCH_LINE_COLORS));
+    line.classList.add('match-line-solid');
+    svg.appendChild(line);
   }
 
   function onMatchRoundWin() {
