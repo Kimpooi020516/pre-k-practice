@@ -576,6 +576,7 @@
   let currentLetter = 'A';
   let currentLevel = 1;
   let roundsAtLevel = 0; // correct rounds completed at this level; not shown on screen, just drives auto level-up
+  const ROUNDS_TO_LEVEL_UP = 5;
 
   function openLetters() {
     showScreen('letters-screen');
@@ -645,7 +646,7 @@
         if (opt.correct) {
           btn.classList.add('correct-flash');
           roundsAtLevel++;
-          const readyToLevelUp = roundsAtLevel >= 10 && currentLevel < 10;
+          const readyToLevelUp = roundsAtLevel >= ROUNDS_TO_LEVEL_UP && currentLevel < 10;
           celebrate(() => {
             btn.classList.remove('correct-flash');
             if (readyToLevelUp) {
@@ -654,7 +655,7 @@
               updateLevelBtn();
               celebrateLevelUp(currentLevel, () => newLetterRound());
             } else {
-              if (roundsAtLevel >= 10) roundsAtLevel = 0; // already at level 10, just reset the counter
+              if (roundsAtLevel >= ROUNDS_TO_LEVEL_UP) roundsAtLevel = 0; // already at level 10, just reset the counter
               newLetterRound();
             }
           });
