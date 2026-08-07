@@ -422,6 +422,53 @@
     }, 1600);
   }
 
+  function playFanfare() {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      const notes = [523.25, 587.33, 659.25, 783.99, 1046.5];
+      notes.forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const start = audioCtx.currentTime + i * 0.14;
+        gain.gain.setValueAtTime(0.001, start);
+        gain.gain.exponentialRampToValueAtTime(0.3, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.4);
+        osc.start(start);
+        osc.stop(start + 0.45);
+      });
+    } catch (e) { /* audio not available, celebration still shows visually */ }
+  }
+
+  function celebrateLevelUp(newLevel, onDone) {
+    const container = document.getElementById('celebration');
+    container.classList.remove('hidden');
+    const big = document.createElement('div');
+    big.className = 'celebration-emoji';
+    big.textContent = '🏆';
+    container.appendChild(big);
+    for (let i = 0; i < 40; i++) {
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      piece.textContent = pickRandom(CONFETTI_EMOJI);
+      piece.style.left = Math.random() * 100 + 'vw';
+      piece.style.fontSize = (16 + Math.random() * 22) + 'px';
+      piece.style.animationDuration = (1 + Math.random() * 1.2) + 's';
+      piece.style.animationDelay = (Math.random() * 0.4) + 's';
+      container.appendChild(piece);
+    }
+    playFanfare();
+    speak('Level up! Level ' + newLevel + '!');
+    setTimeout(() => {
+      container.classList.add('hidden');
+      container.innerHTML = '';
+      if (onDone) onDone();
+    }, 2200);
+  }
+
   function tryAgain(el) {
     el.classList.add('shake');
     speak('Try again!');
@@ -528,6 +575,7 @@
 
   let currentLetter = 'A';
   let currentLevel = 1;
+  let roundsAtLevel = 0; // correct rounds completed at this level; not shown on screen, just drives auto level-up
 
   function openLetters() {
     showScreen('letters-screen');
@@ -551,6 +599,7 @@
       btn.textContent = n;
       btn.onclick = () => {
         currentLevel = n;
+        roundsAtLevel = 0;
         updateLevelBtn();
         document.getElementById('levelPicker').classList.add('hidden');
         speak('Level ' + n);
@@ -595,7 +644,20 @@
       btn.onclick = () => {
         if (opt.correct) {
           btn.classList.add('correct-flash');
-          celebrate(() => { btn.classList.remove('correct-flash'); newLetterRound(); });
+          roundsAtLevel++;
+          const readyToLevelUp = roundsAtLevel >= 10 && currentLevel < 10;
+          celebrate(() => {
+            btn.classList.remove('correct-flash');
+            if (readyToLevelUp) {
+              currentLevel++;
+              roundsAtLevel = 0;
+              updateLevelBtn();
+              celebrateLevelUp(currentLevel, () => newLetterRound());
+            } else {
+              if (roundsAtLevel >= 10) roundsAtLevel = 0; // already at level 10, just reset the counter
+              newLetterRound();
+            }
+          });
         } else {
           tryAgain(btn);
         }
