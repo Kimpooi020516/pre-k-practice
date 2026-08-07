@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Pre-K Practice</title>
+<title>Enzo Game</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Pre-K">
+<meta name="apple-mobile-web-app-title" content="Enzo Game">
 <style>
   :root{
     --red:#ff4d4d;
@@ -64,8 +64,17 @@
   /* ---------- Home screen ---------- */
   .home-screen {
     position: absolute; inset: 0;
-    display: flex; align-items: center; justify-content: center;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 20px;
     padding: 20px;
+  }
+  .home-title {
+    margin: 0;
+    font-size: clamp(2.2rem, 6vw, 3.6rem);
+    font-weight: 900;
+    color: var(--pink);
+    text-shadow: 0 4px 0 rgba(0,0,0,.1);
+    text-align: center;
   }
   .home-grid {
     display: flex;
@@ -335,6 +344,7 @@
   <button id="replayBtn" class="icon-btn replay-btn hidden" onclick="replayPrompt()" aria-label="hear it">🔊</button>
 
   <main id="home" class="home-screen">
+    <h1 class="home-title">Enzo Game</h1>
     <div class="home-grid">
       <button class="home-card letters" onclick="openLetters()">
         <span class="home-emoji">🔤</span><span>Letters</span>

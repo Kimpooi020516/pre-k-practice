@@ -1,7 +1,7 @@
 {
-  "name": "Pre-K Practice",
-  "short_name": "Pre-K",
-  "description": "Letters, numbers, colors, and lines practice for pre-kindergarten.",
+  "name": "Enzo Game",
+  "short_name": "Enzo Game",
+  "description": "Letters, numbers, colors, lines, matching, and trucks practice for pre-kindergarten.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
